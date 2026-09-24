@@ -1,5 +1,5 @@
-/* Russian Learn v3 — deep curriculum + vocab breadth */
-const CACHE_NAME = "russian-learn-v3";
+/* Russian Learn v4 — 6500+ lemma bank, B2–C2 deepen */
+const CACHE_NAME = "russian-learn-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -19,8 +19,10 @@ const APP_SHELL = [
   "./data/b1-part2.js",
   "./data/b2-part1.js",
   "./data/b2-part2.js",
-  "./data/c1.js",
-  "./data/c2.js",
+  "./data/c1-part1.js",
+  "./data/c1-part2.js",
+  "./data/c2-part1.js",
+  "./data/c2-part2.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"

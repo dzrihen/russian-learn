@@ -375,12 +375,24 @@ class LemmaTracker:
         self.introduced = set()
 
     def mark_text(self, ru_text):
-        """Count lemma hits from a Russian string (simple tokenization)."""
+        """Count lemma hits from a Russian string (multiword first, then tokens)."""
         import re
-        toks = re.findall(r"[А-Яа-яЁё\-]+", ru_text or "")
+        text = (ru_text or "").lower()
+        # Multiword lemmas: longest-first scan so idioms count as introduced
+        if not hasattr(self, "_mw"):
+            self._mw = sorted(
+                (k for k in self.by_lemma if " " in k or "-" in k),
+                key=len, reverse=True,
+            )
+        remaining = text
+        for mw in self._mw:
+            if mw in remaining:
+                self.usage[mw] += 1
+                self.introduced.add(mw)
+                remaining = remaining.replace(mw, " ", 1)
+        toks = re.findall(r"[А-Яа-яЁё\-]+", remaining)
         for t in toks:
             low = t.lower()
-            # try exact, then stem-ish strip endings lightly
             hit = None
             if low in self.by_lemma:
                 hit = low
@@ -453,6 +465,24 @@ TEMPLATES_A1 = [
     ("Без {n} нельзя.", "בלי {n_he} אי אפשר."),
 ]
 
+
+TEMPLATES_ADV = [
+    ("Важно понимать {n}.", "חשוב להבין את {n_he}."),
+    ("Мы обсуждаем {n}.", "אנחנו דנים ב{n_he}."),
+    ("Это требует {n}.", "זה דורש {n_he}."),
+    ("Согласно {n}…", "על פי {n_he}…"),
+    ("Я хочу {v}.", "אני רוצה {v_he}."),
+    ("Необходимо {v}.", "יש צורך {v_he}."),
+    ("Эксперты рекомендуют {v}.", "מומחים ממליצים {v_he}."),
+    ("Это {adj} вопрос.", "זו שאלה {adj_he}."),
+    ("Подход должен быть {adj}.", "הגישה צריכה להיות {adj_he}."),
+    ("Без {n} нельзя продвинуться.", "בלי {n_he} אי אפשר להתקדם."),
+    ("В контексте {n} важно быть точным.", "בהקשר של {n_he} חשוב להיות מדויק."),
+    ("Давайте оценим {n}.", "בואו נעריך את {n_he}."),
+    ("Результаты зависят от {n}.", "התוצאות תלויות ב{n_he}."),
+    ("Я стараюсь {v} каждый день.", "אני משתדל {v_he} כל יום."),
+]
+
 def fill_template(tpl_ru, tpl_he, slots):
     return tpl_ru.format(**slots), tpl_he.format(**slots)
 
@@ -465,10 +495,12 @@ def generate_lemma_sentences(tracker, cefr=("a1",), theme=None, count=8):
     adjs = tracker.pick(30, cefr=cefr, pos="adj")
     rows = []
     used_local = set()
+    levels = set(cefr) if isinstance(cefr, (tuple, list, set)) else {cefr}
+    templates = TEMPLATES_ADV if levels & {"b1", "b2", "c1", "c2"} else TEMPLATES_A1
     for i in range(count * 3):
         if len(rows) >= count:
             break
-        tpl_ru, tpl_he = TEMPLATES_A1[i % len(TEMPLATES_A1)]
+        tpl_ru, tpl_he = templates[i % len(templates)]
         slots = {}
         if "{n}" in tpl_ru:
             if not nouns:
