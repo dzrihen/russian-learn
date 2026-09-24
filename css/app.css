@@ -380,20 +380,51 @@ button { cursor: pointer; border: none; background: none; color: inherit; }
   margin-bottom: 12px;
   color: #92400e;
 }
+.tts-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
 .tts-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 10px 18px;
+  gap: 10px;
+  min-height: 58px;
+  min-width: 200px;
+  padding: 12px 22px;
   background: var(--blue-soft);
-  border: 2px solid #7dd3fc;
+  border: 2px solid #38bdf8;
+  border-bottom-width: 4px;
   border-radius: 16px;
-  font-size: 1.5rem;
-  margin-bottom: 14px;
+  font-size: 1.15rem;
   color: #0369a1;
   font-weight: 800;
+  box-shadow: 0 2px 0 rgba(3, 105, 161, 0.15);
+}
+.tts-btn.tts-replay .tts-ico { font-size: 1.55rem; }
+.tts-btn.playing,
+.tts-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+.tts-btn.pulse {
+  animation: tts-pulse 1.2s ease-in-out infinite;
+}
+@keyframes tts-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+}
+.tts-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.tts-hint.warn {
+  color: #b45309;
+  font-weight: 700;
 }
 .tts-btn .ru-text {
   font-family: var(--ru);

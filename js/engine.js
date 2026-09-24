@@ -162,13 +162,38 @@
     }
 
     function ttsButton(text, showText) {
-      const btn = el("button", "tts-btn");
+      const wrap = el("div", "tts-wrap");
+      const btn = el("button", "tts-btn tts-replay");
       btn.type = "button";
+      btn.setAttribute("aria-label", "השמע שוב");
       btn.innerHTML = showText
-        ? '<span>🔊</span><span class="ru-text">' + escapeHtml(text) + "</span>"
-        : "<span>🔊 האזן</span>";
-      btn.onclick = () => RLSpeech.speak(text);
-      return btn;
+        ? '<span class="tts-ico">🔊</span><span class="ru-text">' + escapeHtml(text) + "</span>"
+        : '<span class="tts-ico">🔊</span><span class="tts-label">השמע שוב</span>';
+      btn.onclick = () => {
+        RLSpeech.speak(text);
+        btn.classList.add("playing");
+        setTimeout(() => btn.classList.remove("playing"), 900);
+      };
+      wrap.appendChild(btn);
+      const hint = el("div", "tts-hint", "לחצו אם השמע הושתק");
+      wrap.appendChild(hint);
+      return wrap;
+    }
+
+    function scheduleAutoPlay(text) {
+      setTimeout(() => {
+        RLSpeech.autoPlay(text).then((r) => {
+          if (r && r.blocked) {
+            const hint = stage.querySelector(".tts-hint");
+            if (hint) {
+              hint.textContent = "לחצו על 🔊 להאזנה (הדפדפן חסם ניגון אוטומטי)";
+              hint.classList.add("warn");
+            }
+            const btn = stage.querySelector(".tts-replay");
+            if (btn) btn.classList.add("pulse");
+          }
+        });
+      }, 280);
     }
 
     function escapeHtml(s) {
@@ -184,8 +209,7 @@
     function renderListenChoice(card, ex) {
       card.appendChild(el("div", "ex-prompt", "מה שמעת? בחר את המשמעות הנכונה"));
       card.appendChild(ttsButton(ex.ru, false));
-      // auto-play
-      setTimeout(() => RLSpeech.speak(ex.ru), 300);
+      scheduleAutoPlay(ex.ru);
       if (ex.translit) {
         const t = translitLine(ex.translit);
         if (t) card.appendChild(t);
@@ -214,7 +238,7 @@
     function renderListenOrder(card, ex) {
       card.appendChild(el("div", "ex-prompt", "האזן ובנה את המשפט לפי הסדר"));
       card.appendChild(ttsButton(ex.ru, false));
-      setTimeout(() => RLSpeech.speak(ex.ru), 300);
+      scheduleAutoPlay(ex.ru);
       const words = ex.words || ex.ru.split(/\s+/);
       const answer = el("div", "chip-answer");
       const bank = el("div", "chip-bank");
@@ -376,8 +400,8 @@
       }
 
       function playHeard() {
-        const heard = turns.slice(0, step).map((t) => t.ru).join(". ");
-        if (heard) RLSpeech.speak(heard);
+        const parts = turns.slice(0, step).map((t) => t.ru);
+        if (parts.length) RLSpeech.speakTurns(parts, 420);
       }
 
       function nextNonUser() {
@@ -391,8 +415,8 @@
       while (step < turns.length && turns[step].speaker !== "user") step++;
       paint();
       setTimeout(() => {
-        const intro = turns.slice(0, step).map((t) => t.ru).join(". ");
-        if (intro) RLSpeech.speak(intro);
+        const intro = turns.slice(0, step).map((t) => t.ru);
+        if (intro.length) RLSpeech.speakTurns(intro, 420);
       }, 250);
 
       const choicesBox = el("div", "choices");
@@ -401,9 +425,8 @@
       function showChoices() {
         choicesBox.innerHTML = "";
         if (step >= turns.length) {
-          // done — play full dialogue
-          const full = turns.map((t) => t.ru).join(". ");
-          RLSpeech.speak(full);
+          // done — play full dialogue with short pauses between turns
+          RLSpeech.speakTurns(turns.map((t) => t.ru), 450);
           succeed("שיחה מלאה ✓");
           return;
         }
@@ -562,7 +585,7 @@
       }
       if (ex.he) card.appendChild(el("div", "he-prompt", escapeHtml(ex.he)));
       card.appendChild(ttsButton(ex.ru, false));
-      setTimeout(() => RLSpeech.speak(ex.ru), 300);
+      scheduleAutoPlay(ex.ru);
 
       const actions = el("div", "speak-actions");
       if (RLSpeech.canRecognize()) {
@@ -611,7 +634,7 @@
           if (ex.exampleHe) card.appendChild(el("div", "he-prompt", escapeHtml(ex.exampleHe)));
         }
         card.appendChild(ttsButton(ex.example || ex.letter, false));
-        setTimeout(() => RLSpeech.speak(ex.example || ex.letter), 300);
+        scheduleAutoPlay(ex.example || ex.letter);
       }
       if (ex.letters) {
         const grid = el("div", "alpha-grid");

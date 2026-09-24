@@ -11,7 +11,7 @@ from exhelpers import (
 )
 from content_lib import chunk_lessons, with_checkpoint
 from vocab_all import load_bank
-from vocab_bank import LemmaTracker, generate_lemma_sentences, TEMPLATES_A1
+from vocab_bank import LemmaTracker, generate_lemma_sentences, natural_rows_for_lemma
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "data")
 CHECKPOINT_EVERY = 8
@@ -47,13 +47,12 @@ def curated_plus_vocab(tracker, curated, cefr, theme, target_rows):
             # broaden theme
             batch = generate_lemma_sentences(tracker, cefr=cefr, theme=None, count=min(8, need))
         if not batch:
-            # force from unused nouns
-            unused = tracker.pick(need, cefr=cefr, pos="n") or tracker.pick(need, pos="n")
+            # force natural frames from unused lemmas
+            unused = tracker.pick(need, cefr=cefr) or tracker.pick(need)
             for u in unused[:need]:
-                ru = f"Это {u['lemma']}."
-                he = f"זה {u['he']}."
-                batch.append((ru, he))
-                tracker.mark_text(ru)
+                for ru, he in natural_rows_for_lemma(u)[:1]:
+                    batch.append((ru, he))
+                    tracker.mark_text(ru)
         rows.extend(batch)
         need = target_rows - len(rows)
         if not batch:
@@ -603,38 +602,34 @@ def expand_level(level_id, title_he, subtitle_he, tracker, min_lessons):
         return sum(len(u["lessons"]) for u in us)
 
     extra_i = 1
-    # Keep adding vocab units until min lessons OR unused lemmas for this band are thin
-    max_extra = {"A1": 45, "A2": 50, "B1": 80, "B2": 100, "C1": 90, "C2": 80}.get(level_id, 50)
+    # Keep adding vocab units until min_lessons; recycle band lemmas with natural frames if needed
+    max_extra = {"A1": 50, "A2": 55, "B1": 95, "B2": 120, "C1": 110, "C2": 100}.get(level_id, 50)
     while extra_i <= max_extra:
         below_min = count_lessons(units) < min_lessons
         unused = tracker.pick(80, cefr=cefr)
-        if len(unused) < 8:
-            unused = tracker.pick(80)
-        # After min lessons, only continue if many unused remain for this band
+        if len(unused) < 12:
+            # Prefer least-used lemmas in this CEFR band (even if already seen)
+            unused = tracker.sample_band(80, cefr=cefr) or tracker.sample_band(80)
         if not below_min:
+            # Optional a few more only while truly new lemmas remain
             band_unused = [x for x in tracker.bank if x["cefr"] in cefr and x["lemma"].lower() not in tracker.introduced]
-            if len(band_unused) < 25 and len(unused) < 12:
+            if len(band_unused) < 20:
                 break
+            unused = band_unused[:80]
         if len(unused) < 6:
             break
         rows = []
-        for u in unused:
-            if u["pos"] == "v":
-                rows.append((f"Необходимо {u['lemma']}.", f"יש צורך {u['he']}."))
-                rows.append((f"Я хочу {u['lemma']}.", f"אני רוצה {u['he']}."))
-            elif u["pos"] == "adj":
-                rows.append((f"Это {u['lemma']} подход.", f"זו גישה {u['he']}."))
-                rows.append((f"Ситуация выглядит {u['lemma']}.", f"המצב נראה {u['he']}."))
-            elif u["pos"] == "adv":
-                rows.append((f"Мы действуем {u['lemma']}.", f"אנחנו פועלים {u['he']}."))
-            else:
-                rows.append((f"Важно понимать {u['lemma']}.", f"חשוב להבין את {u['he']}."))
-                rows.append((f"Мы обсуждаем {u['lemma']}.", f"אנחנו דנים ב{u['he']}."))
-            tracker.mark_text(rows[-1][0])
-            # Also mark the lemma string itself for multiword / exact hits
+        # Rotate through lemmas so consecutive units don't clone the same openings
+        start = (extra_i * 17) % max(1, len(unused))
+        ordered = unused[start:] + unused[:start]
+        for u in ordered:
+            for ru, he in natural_rows_for_lemma(u):
+                rows.append((ru, he))
+                tracker.mark_text(ru)
             tracker.mark_text(u["lemma"])
         uid = f"{level_id.lower()}-u{90+extra_i:02d}"
-        units.append(build_unit(level_id, uid, f"אוצר מילים {extra_i}", f"Словарь {extra_i}", rows[:56], tip="מילים חדשות מהמאגר — גיוון"))
+        tip = "מילים חדשות מהמאגר — ניסוח טבעי" if below_min else "חזרה מגוונת על אוצר המילים"
+        units.append(build_unit(level_id, uid, f"אוצר מילים {extra_i}", f"Словарь {extra_i}", rows[:56], tip=tip))
         extra_i += 1
 
     return {
@@ -683,12 +678,12 @@ def main():
     print("Bank lemmas:", tracker.stats()["bank_size"])
 
     targets = {
-        "A1": (250, "מתחילים", "אלפבית עד משפטים יומיומיים — יסוד רחב"),
-        "A2": (200, "יסודי מתקדם", "עבר, עתיד, יחסות, חיי יום"),
-        "B1": (280, "בינוני", "דעות, אספקט, נרטיב, אוצר מילים רחב"),
-        "B2": (320, "בינוני־גבוה", "טיעונים, מדיה, מופשט, אוצר מתקדם"),
-        "C1": (260, "מתקדם", "סגנון, ניואנס, רגיסטר, אקדמי"),
-        "C2": (200, "שליטה גבוהה", "שיח כמעט ילידי, תרבות גבוהה"),
+        "A1": (980, "מתחילים", "אלפבית עד משפטים יומיומיים — יסוד רחב"),
+        "A2": (920, "יסודי מתקדם", "עבר, עתיד, יחסות, חיי יום"),
+        "B1": (920, "בינוני", "דעות, אספקט, נרטיב, אוצר מילים רחב"),
+        "B2": (1350, "בינוני־גבוה", "טיעונים, מדיה, מופשט, אוצר מתקדם"),
+        "C1": (1250, "מתקדם", "סגנון, ניואנס, רגיסטר, אקדמי"),
+        "C2": (1100, "שליטה גבוהה", "שיח כמעט ילידי, תרבות גבוהה"),
     }
 
     files_map = {}
@@ -706,6 +701,8 @@ def main():
     manifest = {k: [f"./data/{f}" for f in v] for k,v in files_map.items()}
     with open(os.path.join(OUT, "files.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
+    with open(os.path.join(OUT, "files.js"), "w", encoding="utf-8") as f:
+        f.write("window.RL_LEVEL_FILES=" + json.dumps(manifest, ensure_ascii=False) + ";\n")
 
     # Vocab meta for UI
     meta = {

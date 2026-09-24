@@ -1,5 +1,5 @@
-/* Russian Learn v4 — 6500+ lemma bank, B2–C2 deepen */
-const CACHE_NAME = "russian-learn-v4";
+/* Russian Learn v5 — 6500+ lemma bank, B2–C2 deepen */
+const CACHE_NAME = "russian-learn-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./js/engine.js",
   "./js/app.js",
   "./data/meta.js",
+  "./data/files.js",
   "./data/curriculum.js",
   "./data/a1-part1.js",
   "./data/a1-part2.js",

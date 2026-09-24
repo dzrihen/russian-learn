@@ -98,7 +98,7 @@
       installTipHtml() +
       '<div class="hero"><div class="owl">🐻</div>' +
       "<h1>לומדים רוסית</h1>" +
-      '<p class="sub" style="color:var(--muted)">מסלול עמוק A1→C2 · ~1700 שיעורים · אוצר מילים רחב</p></div>' +
+      '<p class="sub" style="color:var(--muted)">מסלול עמוק A1→C2 · ~6500 שיעורים · אוצר מילים רחב</p></div>' +
       continueHtml +
       '<div class="card">' +
       "<h2>ההתקדמות שלך</h2>" +
@@ -124,6 +124,10 @@
       '<button type="button" class="toggle' +
       (p.settings.sound !== false ? " on" : "") +
       '" id="tog-sound" aria-label="צליל"></button></div>' +
+      '<div class="toggle-row"><span>דיבור איטי ללומדים (~0.9)</span>' +
+      '<button type="button" class="toggle' +
+      (p.settings.speechRate !== "normal" ? " on" : "") +
+      '" id="tog-slow" aria-label="קצב דיבור"></button></div>' +
       "</div>";
 
     const tipX = qs("#tip-x");
@@ -148,6 +152,11 @@
       const on = RLProgress.get().settings.sound === false;
       RLProgress.setSetting("sound", on);
       this.classList.toggle("on", on);
+    };
+    qs("#tog-slow").onclick = function () {
+      const slow = RLProgress.get().settings.speechRate === "normal";
+      RLProgress.setSetting("speechRate", slow ? "slow" : "normal");
+      this.classList.toggle("on", slow);
     };
   }
 

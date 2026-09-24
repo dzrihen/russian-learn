@@ -11,7 +11,7 @@
     hearts: 5,
     completed: {}, // lessonId -> { xp, at, perfect }
     currentLevel: "A1",
-    settings: { translit: true, sound: true },
+    settings: { translit: true, sound: true, speechRate: "slow" },
     installTipDismissed: false,
   };
 

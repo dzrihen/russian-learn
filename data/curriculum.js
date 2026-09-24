@@ -6,12 +6,30 @@
   const UNLOCK_RATIO = 0.92; // require 92% of previous level
 
   const LEVEL_FILES = (global.RL_LEVEL_FILES) || {
-    A1: ["./data/a1-part1.js", "./data/a1-part2.js"],
-    A2: ["./data/a2-part1.js", "./data/a2-part2.js"],
-    B1: ["./data/b1-part1.js", "./data/b1-part2.js"],
-    B2: ["./data/b2-part1.js", "./data/b2-part2.js"],
-    C1: ["./data/c1-part1.js", "./data/c1-part2.js"],
-    C2: ["./data/c2-part1.js", "./data/c2-part2.js"],
+    "A1": [
+      "./data/a1-part1.js",
+      "./data/a1-part2.js"
+    ],
+    "A2": [
+      "./data/a2-part1.js",
+      "./data/a2-part2.js"
+    ],
+    "B1": [
+      "./data/b1-part1.js",
+      "./data/b1-part2.js"
+    ],
+    "B2": [
+      "./data/b2-part1.js",
+      "./data/b2-part2.js"
+    ],
+    "C1": [
+      "./data/c1-part1.js",
+      "./data/c1-part2.js"
+    ],
+    "C2": [
+      "./data/c2-part1.js",
+      "./data/c2-part2.js"
+    ]
   };
 
   const loaded = {};
