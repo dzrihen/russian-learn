@@ -1,5 +1,5 @@
-/* Russian Learn v6 — SRS, conversation, grammar, cached audio */
-const CACHE_NAME = "russian-learn-v6";
+/* Russian Learn v7 — SRS, conversation, grammar, cached audio */
+const CACHE_NAME = "russian-learn-v7";
 const APP_SHELL = [
   "./",
   "./index.html",

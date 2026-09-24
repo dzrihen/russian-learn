@@ -1,1 +1,1 @@
-window.RL_META={"bankSize": 6440, "introducedInContent": 6439, "lessonCounts": {"A1": 991, "A2": 934, "B1": 929, "B2": 1356, "C1": 1255, "C2": 1113}, "totalLessons": 6578};
+window.RL_META={"bankSize": 6440, "introducedInContent": 6440, "lessonCounts": {"A1": 325, "A2": 301, "B1": 326, "B2": 326, "C1": 281, "C2": 263}, "totalLessons": 1822};
