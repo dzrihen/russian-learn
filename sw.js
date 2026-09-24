@@ -1,5 +1,5 @@
-/* Russian Learn v9 — shell-only precache; level parts + audio on demand */
-const CACHE_NAME = "russian-learn-v9";
+/* Russian Learn v10 — shell-only precache; level parts + audio on demand */
+const CACHE_NAME = "russian-learn-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
