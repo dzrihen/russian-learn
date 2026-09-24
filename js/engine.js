@@ -90,6 +90,32 @@
       feedback.querySelector(".fb-detail").textContent = detail || "";
       const btn = feedback.querySelector(".fb-next");
       btn.textContent = ok ? "המשך" : "ננסה שוב / המשך";
+      // SRS Easy button
+      let easy = feedback.querySelector(".fb-easy");
+      const ex = exercises[idx];
+      if (ok && ex && ex._srsLemma && global.RLSrs) {
+        if (!easy) {
+          easy = document.createElement("button");
+          easy.type = "button";
+          easy.className = "btn btn-ghost fb-easy";
+          easy.style.marginTop = "8px";
+          feedback.appendChild(easy);
+        }
+        easy.style.display = "";
+        easy.textContent = "קליל (Easy) → מרווח ארוך יותר";
+        easy.onclick = () => {
+          try {
+            RLSrs.review(ex._srsLemma, "easy");
+            ex._srsGraded = true;
+          } catch (e) {}
+          feedback.classList.remove("show");
+          busy = false;
+          onNext();
+        };
+      } else if (easy) {
+        easy.style.display = "none";
+        easy.onclick = null;
+      }
       btn.onclick = () => {
         feedback.classList.remove("show");
         busy = false;
@@ -115,6 +141,13 @@
       mistakes++;
       hearts = Math.max(0, hearts - 1);
       updateHearts();
+      try {
+        if (global.RLSrs && exercises[idx]) RLSrs.trackExerciseResult(exercises[idx], false);
+        // SRS review grade again
+        if (exercises[idx] && exercises[idx]._srsLemma && global.RLSrs) {
+          RLSrs.review(exercises[idx]._srsLemma, "again");
+        }
+      } catch (e) {}
       showFeedback(false, detail, () => {
         if (hearts <= 0) {
           // gentle: refill and continue
@@ -127,7 +160,19 @@
     }
 
     function succeed(detail) {
-      showFeedback(true, detail || "", advance);
+      try {
+        if (global.RLSrs && exercises[idx]) RLSrs.trackExerciseResult(exercises[idx], true);
+      } catch (e) {}
+      const exNow = exercises[idx];
+      showFeedback(true, detail || "", () => {
+        try {
+          if (exNow && exNow._srsLemma && global.RLSrs && !exNow._srsGraded) {
+            RLSrs.review(exNow._srsLemma, "good");
+            exNow._srsGraded = true;
+          }
+        } catch (e) {}
+        advance();
+      });
     }
 
     function render() {

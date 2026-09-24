@@ -1,5 +1,5 @@
-/* Russian Learn v5 — 6500+ lemma bank, B2–C2 deepen */
-const CACHE_NAME = "russian-learn-v5";
+/* Russian Learn v6 — SRS, conversation, grammar, cached audio */
+const CACHE_NAME = "russian-learn-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,11 +7,15 @@ const APP_SHELL = [
   "./css/app.css",
   "./js/speech.js",
   "./js/progress.js",
+  "./js/srs.js",
   "./js/engine.js",
+  "./js/conversation.js",
   "./js/app.js",
   "./data/meta.js",
   "./data/files.js",
   "./data/curriculum.js",
+  "./data/conversations.js",
+  "./data/grammar.js",
   "./data/a1-part1.js",
   "./data/a1-part2.js",
   "./data/a2-part1.js",
@@ -24,6 +28,7 @@ const APP_SHELL = [
   "./data/c1-part2.js",
   "./data/c2-part1.js",
   "./data/c2-part2.js",
+  "./audio/manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
@@ -84,6 +89,7 @@ function isCacheable(pathname) {
     p.includes("/icons/") ||
     p.includes("/css/") ||
     p.includes("/js/") ||
-    p.includes("/data/")
+    p.includes("/data/") ||
+    p.includes("/audio/")
   );
 }

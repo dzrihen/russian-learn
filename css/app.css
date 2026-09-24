@@ -698,3 +698,27 @@ button { cursor: pointer; border: none; background: none; color: inherit; }
 .level-card.locked .unlock-hint {
   color: #b45309;
 }
+
+/* v6 — SRS / conversation / grammar */
+.stat-pill.srs { border-color: #ddd6fe; background: #f5f3ff; color: #6d28d9; }
+.srs-card .srs-due { margin: 8px 0 12px; font-size: 0.95rem; }
+.srs-card .due-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 36px; padding: 0 10px; margin-left: 6px;
+  border-radius: 999px; background: #6d28d9; color: #fff; font-weight: 800;
+}
+.conv-card { width: 100%; text-align: right; margin-bottom: 10px; }
+.conv-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.conv-free { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.conv-input {
+  flex: 1; min-width: 160px; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid var(--border); background: #fff;
+}
+.conv-fb { padding: 10px 12px; border-radius: 12px; font-size: 0.92rem; }
+.conv-fb.ok { background: var(--primary-soft); border: 2px solid #86efac; }
+.conv-fb.bad { background: var(--danger-soft); border: 2px solid #fca5a5; }
+.conv-fb .model-ans { margin-top: 6px; font-weight: 700; }
+.bubble-he { font-size: 0.8rem; color: var(--muted); margin: -4px 8px 8px; text-align: right; }
+.bottom-nav { gap: 2px; }
+.bottom-nav .nav-btn { font-size: 0.72rem; padding: 6px 4px; }
+.bottom-nav .nav-ico { font-size: 1.15rem; }

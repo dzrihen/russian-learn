@@ -92,6 +92,13 @@
     return state;
   }
 
+  function awardXp(n) {
+    state.xp = (state.xp || 0) + (n || 0);
+    touchStreak();
+    save(state);
+    return state.xp;
+  }
+
   function setLevel(levelId) {
     state.currentLevel = levelId;
     save(state);
@@ -156,6 +163,7 @@
     touchStreak,
     isComplete,
     completeLesson,
+    awardXp,
     setLevel,
     setSetting,
     dismissInstallTip,

@@ -1,1 +1,6 @@
 scripts/__pycache__/
+
+.venv/
+scripts/__pycache__/
+scripts/_*.json
+

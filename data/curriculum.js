@@ -52,7 +52,28 @@
         });
       }
     });
+    // Grammar path (parallel, not CEFR unlock)
+    const gram = global.RL_GRAMMAR;
+    if (gram) {
+      (gram.units || []).forEach((u) => {
+        (u.lessons || []).forEach((les) => {
+          lessonIndex[les.id] = les;
+        });
+      });
+    }
     ready = levels.length > 0;
+  }
+
+  function grammarLessonIds() {
+    const gram = global.RL_GRAMMAR;
+    if (!gram) return [];
+    const ids = [];
+    (gram.units || []).forEach((u) => (u.lessons || []).forEach((l) => ids.push(l.id)));
+    return ids;
+  }
+
+  function getGrammar() {
+    return global.RL_GRAMMAR || null;
   }
 
   function loadScript(src) {
@@ -229,6 +250,8 @@
     nextLevelId,
     nextLesson,
     vocabLearnedCount,
+    grammarLessonIds,
+    getGrammar,
     UNLOCK_RATIO,
     LEVEL_ORDER,
     _collect: collectFromWindow,

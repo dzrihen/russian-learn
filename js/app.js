@@ -50,6 +50,9 @@
       '<span class="stat-pill vocab" title="מילים שנלמדו">📚 ' +
       ((RLCurriculum.vocabLearnedCount && RLCurriculum.vocabLearnedCount()) || 0) +
       "</span>" +
+      (window.RLSrs
+        ? '<span class="stat-pill srs" title="חזרה">🔁 ' + RLSrs.dueCount() + "</span>"
+        : "") +
       "</div>"
     );
   }
@@ -98,7 +101,7 @@
       installTipHtml() +
       '<div class="hero"><div class="owl">🐻</div>' +
       "<h1>לומדים רוסית</h1>" +
-      '<p class="sub" style="color:var(--muted)">מסלול עמוק A1→C2 · ~6500 שיעורים · אוצר מילים רחב</p></div>' +
+      '<p class="sub" style="color:var(--muted)">מסלול A1→C2 · חזרה · שיחה · דקדוק · אוצר מילים רחב</p></div>' +
       continueHtml +
       '<div class="card">' +
       "<h2>ההתקדמות שלך</h2>" +
@@ -115,6 +118,9 @@
       " שיעורים הושלמו</p>" +
       '<button type="button" class="btn btn-ghost btn-sm" id="btn-path" style="margin-top:10px;width:100%">פתח מסלול</button>' +
       "</div>" +
+      srsHomeCard() +
+      convHomeCard() +
+      grammarHomeCard() +
       '<div class="card"><h2>הגדרות</h2>' +
       '<div class="toggle-row"><span>תעתיק (לטינית)</span>' +
       '<button type="button" class="toggle' +
@@ -158,6 +164,92 @@
       RLProgress.setSetting("speechRate", slow ? "slow" : "normal");
       this.classList.toggle("on", slow);
     };
+    const br = qs("#btn-srs-review");
+    if (br) br.onclick = () => startSrsReview();
+    const bc2 = qs("#btn-conv");
+    if (bc2) bc2.onclick = () => navigate("conversation");
+    const bg = qs("#btn-grammar");
+    if (bg) bg.onclick = () => navigate("grammar");
+  }
+
+  function srsHomeCard() {
+    if (!window.RLSrs) return "";
+    const due = RLSrs.dueCount();
+    const total = RLSrs.totalCards();
+    return (
+      '<div class="card srs-card">' +
+      "<h2>חזרה על מילים</h2>" +
+      '<p class="sub">חזרה מרווחת בסגנון Anki · ' +
+      total +
+      " כרטיסים במאגר</p>" +
+      '<div class="srs-due">' +
+      (due
+        ? '<span class="due-num">' + due + "</span> ממתינים לחזרה היום"
+        : "אין כרטיסים למועד היום — כל הכבוד!") +
+      "</div>" +
+      (due
+        ? '<button type="button" class="btn btn-primary" id="btn-srs-review">התחל חזרה (' +
+          Math.min(due, RLSrs.SESSION_SIZE) +
+          " כרטיסים)</button>"
+        : '<button type="button" class="btn btn-ghost" id="btn-srs-review" disabled>אין חזרה כרגע</button>') +
+      "</div>"
+    );
+  }
+
+  function convHomeCard() {
+    const n = (window.RLConversation && RLConversation.scenarios().length) || 0;
+    return (
+      '<div class="card">' +
+      "<h2>שיחה</h2>" +
+      '<p class="sub">תרגול חופשי לפי תרחישים · ' +
+      n +
+      " תרחישים</p>" +
+      '<button type="button" class="btn btn-blue" id="btn-conv">פתח שיחה ←</button></div>'
+    );
+  }
+
+  function grammarHomeCard() {
+    const ids = (RLCurriculum.grammarLessonIds && RLCurriculum.grammarLessonIds()) || [];
+    const done = RLProgress.countCompleted(ids);
+    return (
+      '<div class="card">' +
+      "<h2>דקדוק</h2>" +
+      '<p class="sub">מין, מקרים, אספקט ותנועה · ' +
+      done +
+      "/" +
+      ids.length +
+      " שיעורים</p>" +
+      '<button type="button" class="btn btn-ghost" id="btn-grammar">למסלול הדקדוק ←</button></div>'
+    );
+  }
+
+  function startSrsReview() {
+    if (!window.RLSrs) return;
+    const lesson = RLSrs.buildReviewLesson();
+    if (!lesson) return;
+    showNav(false);
+    if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+    appEl.innerHTML = '<div id="lesson-root"></div>';
+    const root = qs("#lesson-root");
+    lessonRunner = RLEngine.runLesson(lesson, root, {
+      onExit() {
+        if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+        lessonRunner = null;
+        navigate("home");
+      },
+      onComplete({ xp }) {
+        RLProgress.awardXp(xp || 10);
+        if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+        lessonRunner = null;
+        appEl.innerHTML =
+          '<div class="celeb"><div class="big">🔁</div><h1>חזרה הושלמה!</h1>' +
+          '<div class="xp-gain">+' +
+          (xp || 10) +
+          " XP</div>" +
+          '<button type="button" class="btn btn-primary" id="btn-srs-done">חזרה לבית</button></div>';
+        qs("#btn-srs-done").onclick = () => navigate("home");
+      },
+    });
   }
 
   function renderLevels() {
@@ -368,7 +460,132 @@
       '<div class="card"><h2>טיפ</h2><p class="sub">שיעור אחד ביום ≈ 4–5 שנים לסיום A1→C2. יסוד רחב, חזרות ושערי ביקורת — אל תמהרו.</p></div>';
   }
 
-  function startLesson(lessonId) {
+  function renderConversation() {
+    showNav(true);
+    setActiveNav("conversation");
+    const by = (RLConversation && RLConversation.byLevel()) || {};
+    const order = ["A1", "A2", "B1", "B2", "C1", "C2"];
+    let html =
+      statsBar() +
+      "<h1 style='margin-bottom:8px'>שיחה</h1>" +
+      '<p class="sub" style="color:var(--muted);margin-bottom:12px">בחרו תרחיש — אפשר לבחור תשובה או לכתוב/לדבר חופשי</p>';
+    order.forEach((lv) => {
+      const list = by[lv] || [];
+      if (!list.length) return;
+      html += '<div class="unit-banner"><div class="unit-num">' + lv + '</div><div class="unit-title">תרחישי ' + lv + "</div></div>";
+      list.forEach((sc) => {
+        html +=
+          '<button type="button" class="level-card conv-card" data-sid="' +
+          sc.id +
+          '"><div class="level-info"><strong>' +
+          escape(sc.titleHe) +
+          "</strong><span>" +
+          escape(sc.settingHe || sc.titleRu || "") +
+          "</span></div></button>";
+      });
+    });
+    appEl.innerHTML = html;
+    appEl.querySelectorAll(".conv-card").forEach((btn) => {
+      btn.onclick = () => {
+        const sc = RLConversation.scenarios().find((s) => s.id === btn.dataset.sid);
+        if (sc) startConversation(sc);
+      };
+    });
+  }
+
+  function startConversation(scenario) {
+    showNav(false);
+    if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+    appEl.innerHTML = '<div id="lesson-root"></div>';
+    const root = qs("#lesson-root");
+    lessonRunner = RLConversation.runScenario(scenario, root, {
+      onExit() {
+        if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+        lessonRunner = null;
+        navigate("conversation");
+      },
+      onComplete({ xp }) {
+        RLProgress.awardXp(xp || 10);
+        if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
+        lessonRunner = null;
+        appEl.innerHTML =
+          '<div class="celeb"><div class="big">💬</div><h1>שיחה הושלמה!</h1><p>' +
+          escape(scenario.titleHe) +
+          '</p><div class="xp-gain">+' +
+          (xp || 10) +
+          ' XP</div><button type="button" class="btn btn-primary" id="btn-c-done">עוד שיחה</button>' +
+          '<button type="button" class="btn btn-ghost" id="btn-c-home" style="margin-top:8px">לבית</button></div>';
+        qs("#btn-c-done").onclick = () => navigate("conversation");
+        qs("#btn-c-home").onclick = () => navigate("home");
+      },
+    });
+  }
+
+  function renderGrammar() {
+    showNav(true);
+    setActiveNav("path");
+    const gram = RLCurriculum.getGrammar && RLCurriculum.getGrammar();
+    if (!gram) {
+      appEl.innerHTML = "<p>דקדוק לא נטען</p>";
+      return;
+    }
+    const ordered = RLCurriculum.grammarLessonIds();
+    let html =
+      '<div class="path-header">' +
+      statsBar() +
+      "<h1>דקדוק</h1>" +
+      '<p class="sub" style="color:var(--muted)">' +
+      escape(gram.subtitleHe || "") +
+      "</p>" +
+      '<button type="button" class="btn btn-ghost btn-sm" id="btn-back-home" style="margin-top:8px">← בית</button>' +
+      "</div><div class='path-units'>";
+    (gram.units || []).forEach((unit, ui) => {
+      html +=
+        '<div class="unit-banner"><div class="unit-num">יח׳ ' +
+        (ui + 1) +
+        '</div><div class="unit-title">' +
+        escape(unit.titleHe) +
+        '</div><div class="unit-ru ru">' +
+        escape(unit.titleRu || "") +
+        "</div></div>";
+      (unit.lessons || []).forEach((les) => {
+        const st = RLProgress.lessonStatus(les.id, ordered);
+        let cls = "locked";
+        let ico = "🔒";
+        if (st === "done") {
+          cls = "done";
+          ico = "★";
+        } else if (st === "current" || st === "unlocked") {
+          cls = st === "current" ? "current" : "unlocked";
+          ico = "▶";
+        }
+        // Grammar: unlock all after first; use sequential like main path
+        html +=
+          '<div class="path-node-wrap"><div><button type="button" class="path-node ' +
+          cls +
+          '" data-id="' +
+          les.id +
+          '" data-st="' +
+          st +
+          '">' +
+          ico +
+          '</button><div class="node-label">' +
+          escape(les.titleHe) +
+          "</div></div></div>";
+      });
+    });
+    html += "</div>";
+    appEl.innerHTML = html;
+    qs("#btn-back-home").onclick = () => navigate("home");
+    appEl.querySelectorAll(".path-node").forEach((btn) => {
+      btn.onclick = () => {
+        if (btn.dataset.st === "locked") return;
+        startLesson(btn.dataset.id);
+      };
+    });
+  }
+
+    function startLesson(lessonId) {
     const lesson = RLCurriculum.getLesson(lessonId);
     if (!lesson) return;
     showNav(false);
@@ -381,7 +598,8 @@
       onExit() {
         if (lessonRunner && lessonRunner.destroy) lessonRunner.destroy();
         lessonRunner = null;
-        navigate("path");
+        if (lesson.level === "GRAM") navigate("grammar");
+        else navigate("path");
       },
       onComplete({ xp, perfect, mistakes }) {
         RLProgress.completeLesson(lesson.id, xp, perfect);
@@ -419,8 +637,17 @@
       '<button type="button" class="btn btn-ghost" id="btn-to-path" style="margin-top:8px">חזרה למסלול</button>' +
       "</div>";
 
-    qs("#btn-to-path").onclick = () => navigate("path");
+    qs("#btn-to-path").onclick = () =>
+      navigate(lesson.level === "GRAM" ? "grammar" : "path");
     qs("#btn-next-les").onclick = () => {
+      if (lesson.level === "GRAM") {
+        const ids = RLCurriculum.grammarLessonIds();
+        const idx = ids.indexOf(lesson.id);
+        const nid = idx >= 0 ? ids[idx + 1] : null;
+        if (nid) startLesson(nid);
+        else navigate("grammar");
+        return;
+      }
       const next = RLCurriculum.nextLesson();
       if (next) startLesson(next.id);
       else navigate("home");
@@ -441,6 +668,8 @@
     else if (name === "path") renderPath();
     else if (name === "levels") renderLevels();
     else if (name === "progress") renderProgress();
+    else if (name === "conversation") renderConversation();
+    else if (name === "grammar") renderGrammar();
   }
 
   navEl.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -464,6 +693,7 @@
       window.RLProgress &&
       window.RLEngine &&
       window.RLSpeech &&
+      window.RLSrs &&
       RLCurriculum.ready
     );
   }
