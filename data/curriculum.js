@@ -1,8 +1,18 @@
-/* Curriculum loader — merges level data from RL_LEVEL_* globals */
+/* Curriculum loader — merges level data from RL_LEVEL_* globals (supports part files) */
 (function (global) {
   "use strict";
 
   const LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"];
+  const UNLOCK_RATIO = 0.92; // require 92% of previous level
+
+  const LEVEL_FILES = (global.RL_LEVEL_FILES) || {
+    A1: ["./data/a1-part1.js", "./data/a1-part2.js"],
+    A2: ["./data/a2-part1.js", "./data/a2-part2.js"],
+    B1: ["./data/b1-part1.js", "./data/b1-part2.js"],
+    B2: ["./data/b2-part1.js", "./data/b2-part2.js"],
+    C1: ["./data/c1.js"],
+    C2: ["./data/c2.js"],
+  };
 
   const loaded = {};
   let levels = [];
@@ -29,11 +39,6 @@
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
-      const m = src.match(/([a-c][12])\.js$/i);
-      if (m && global["RL_LEVEL_" + m[1].toUpperCase()]) {
-        resolve();
-        return;
-      }
       const s = document.createElement("script");
       s.src = src;
       s.async = false;
@@ -43,23 +48,25 @@
     });
   }
 
-  const LEVEL_FILES = {
-    A1: "./data/a1.js",
-    A2: "./data/a2.js",
-    B1: "./data/b1.js",
-    B2: "./data/b2.js",
-    C1: "./data/c1.js",
-    C2: "./data/c2.js",
-  };
-
   async function ensureLevel(levelId) {
     if (loaded[levelId] || global["RL_LEVEL_" + levelId]) {
+      // still may need part2
+      const files = LEVEL_FILES[levelId] || [];
+      if (files.length > 1 && !loaded[levelId + "_parts"]) {
+        for (let i = 1; i < files.length; i++) {
+          await loadScript(files[i]);
+        }
+        loaded[levelId + "_parts"] = true;
+      }
       collectFromWindow();
       return;
     }
-    const src = LEVEL_FILES[levelId];
-    if (!src) return;
-    await loadScript(src);
+    const files = LEVEL_FILES[levelId];
+    if (!files || !files.length) return;
+    for (const src of files) {
+      await loadScript(src);
+    }
+    loaded[levelId + "_parts"] = true;
     collectFromWindow();
   }
 
@@ -95,6 +102,22 @@
     return ids.every((id) => RLProgress.isComplete(id));
   }
 
+  function unlockThreshold(levelId) {
+    const ids = lessonIdsForLevel(levelId);
+    if (!ids.length) return 0;
+    return Math.ceil(ids.length * UNLOCK_RATIO);
+  }
+
+  function remainingToUnlockNext(levelId) {
+    const next = nextLevelId(levelId);
+    if (!next) return 0;
+    const ids = lessonIdsForLevel(levelId);
+    if (!ids.length) return 0;
+    const need = unlockThreshold(levelId);
+    const done = RLProgress.countCompleted(ids);
+    return Math.max(0, need - done);
+  }
+
   function isLevelUnlocked(levelId) {
     const idx = LEVEL_ORDER.indexOf(levelId);
     if (idx <= 0) return true;
@@ -102,7 +125,7 @@
     const ids = lessonIdsForLevel(prev);
     if (!ids.length) return true;
     const done = RLProgress.countCompleted(ids);
-    return done >= Math.ceil(ids.length * 0.8) || isLevelComplete(prev);
+    return done >= unlockThreshold(prev) || isLevelComplete(prev);
   }
 
   function nextLevelId(levelId) {
@@ -112,7 +135,7 @@
   }
 
   function nextLesson() {
-    const cur = (RLProgress.get().currentLevel) || "A1";
+    const cur = RLProgress.get().currentLevel || "A1";
     const order = [cur].concat(LEVEL_ORDER.filter((x) => x !== cur));
     for (const lid of order) {
       if (!isLevelUnlocked(lid) && lid !== "A1") continue;
@@ -124,20 +147,56 @@
     return null;
   }
 
-  // Collect immediately if scripts already present; else load
+  /** Unique lemmas seen in completed lessons (approx from exercise RU text). */
+  function vocabLearnedCount() {
+    const completed = RLProgress.get().completed || {};
+    const set = {};
+    Object.keys(completed).forEach((lid) => {
+      const les = getLesson(lid);
+      if (!les) return;
+      (les.exercises || []).forEach((ex) => {
+        const texts = [];
+        if (ex.ru) texts.push(ex.ru);
+        if (ex.sentence) texts.push(ex.sentence);
+        if (ex.example) texts.push(ex.example);
+        (ex.turns || []).forEach((t) => t.ru && texts.push(t.ru));
+        (ex.pairs || []).forEach((p) => p.ru && texts.push(p.ru));
+        (ex.words || []).forEach((w) => texts.push(w));
+        texts.forEach((t) => {
+          const toks = String(t).match(/[А-Яа-яЁё\-]+/g) || [];
+          toks.forEach((w) => {
+            if (w.length >= 2) set[w.toLowerCase()] = true;
+          });
+        });
+      });
+    });
+    return Object.keys(set).length;
+  }
+
   collectFromWindow();
   const bootPromise = ready
     ? Promise.resolve()
-    : ensureAll().then(() => { collectFromWindow(); ready = true; })
-        .catch((e) => { console.error(e); collectFromWindow(); ready = levels.length > 0; });
+    : ensureAll()
+        .then(() => {
+          collectFromWindow();
+          ready = true;
+        })
+        .catch((e) => {
+          console.error(e);
+          collectFromWindow();
+          ready = levels.length > 0;
+        });
 
-  // Re-collect after short delay in case scripts still parsing
   setTimeout(collectFromWindow, 0);
   setTimeout(collectFromWindow, 100);
 
   global.RLCurriculum = {
-    get levels() { return levels; },
-    get ready() { return ready && levels.length > 0; },
+    get levels() {
+      return levels;
+    },
+    get ready() {
+      return ready && levels.length > 0;
+    },
     bootPromise,
     ensureLevel,
     ensureAll,
@@ -147,8 +206,12 @@
     totalLessons,
     isLevelComplete,
     isLevelUnlocked,
+    unlockThreshold,
+    remainingToUnlockNext,
     nextLevelId,
     nextLesson,
+    vocabLearnedCount,
+    UNLOCK_RATIO,
     LEVEL_ORDER,
     _collect: collectFromWindow,
   };

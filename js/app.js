@@ -47,6 +47,9 @@
       '<span class="stat-pill pct">✅ ' +
       pct +
       "%</span>" +
+      '<span class="stat-pill vocab" title="מילים שנלמדו">📚 ' +
+      ((RLCurriculum.vocabLearnedCount && RLCurriculum.vocabLearnedCount()) || 0) +
+      "</span>" +
       "</div>"
     );
   }
@@ -95,7 +98,7 @@
       installTipHtml() +
       '<div class="hero"><div class="owl">🐻</div>' +
       "<h1>לומדים רוסית</h1>" +
-      '<p class="sub" style="color:var(--muted)">מסלול מ־A1 עד C2 · דגש על האזנה ומשפטים</p></div>' +
+      '<p class="sub" style="color:var(--muted)">מסלול עמוק A1→C2 · ~1700 שיעורים · אוצר מילים רחב</p></div>' +
       continueHtml +
       '<div class="card">' +
       "<h2>ההתקדמות שלך</h2>" +
@@ -187,7 +190,23 @@
         "/" +
         ids.length +
         (unlocked ? "" : " 🔒") +
-        "</span></div></button>";
+        "</span>" +
+        (unlocked
+          ? ""
+          : (function () {
+              const prev = RLCurriculum.LEVEL_ORDER[i - 1];
+              const rem = RLCurriculum.remainingToUnlockNext
+                ? RLCurriculum.remainingToUnlockNext(prev)
+                : 0;
+              return (
+                '<span class="unlock-hint">נותרו ' +
+                rem +
+                " שיעורים ברמה " +
+                prev +
+                " לפני הפתיחה</span>"
+              );
+            })()) +
+        "</div></button>";
     });
     html += "</div>";
     appEl.innerHTML = html;
@@ -249,10 +268,14 @@
           ico = "★";
         } else if (st === "current") {
           cls = "current";
-          ico = "▶";
+          ico = les.checkpoint ? "⚑" : "▶";
         } else if (st === "unlocked") {
           cls = "unlocked";
-          ico = "○";
+          ico = les.checkpoint ? "⚑" : "○";
+        }
+        if (les.checkpoint) {
+          cls += " checkpoint";
+          if (st === "done") ico = "⚑";
         }
         // Allow redo of done; allow current; block locked
         html +=
@@ -324,11 +347,16 @@
       (p.streak || 0) +
       "</strong> ימים · ⚡ <strong>" +
       (p.xp || 0) +
-      "</strong> XP</p></div>" +
+      "</strong> XP</p>" +
+      "<p class=\"sub\">מילים שנלמדו: <strong>" +
+      ((RLCurriculum.vocabLearnedCount && RLCurriculum.vocabLearnedCount()) || 0) +
+      "</strong>" +
+      (window.RL_META && RL_META.bankSize ? " · מאגר קורס ≈ " + RL_META.bankSize : "") +
+      "</p></div>" +
       '<div class="card"><h2>לפי רמה</h2>' +
       rows +
       "</div>" +
-      '<div class="card"><h2>טיפ</h2><p class="sub">שיעור אחד ביום ≈ שנה+ לסיום הכל. דגש על האזנה וחזרה בקול!</p></div>';
+      '<div class="card"><h2>טיפ</h2><p class="sub">שיעור אחד ביום ≈ 4–5 שנים לסיום A1→C2. יסוד רחב, חזרות ושערי ביקורת — אל תמהרו.</p></div>';
   }
 
   function startLesson(lessonId) {

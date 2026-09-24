@@ -1,5 +1,5 @@
-/* Russian Learn v2 — cache-first shell + curriculum */
-const CACHE_NAME = "russian-learn-v2";
+/* Russian Learn v3 — deep curriculum + vocab breadth */
+const CACHE_NAME = "russian-learn-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,11 +9,16 @@ const APP_SHELL = [
   "./js/progress.js",
   "./js/engine.js",
   "./js/app.js",
+  "./data/meta.js",
   "./data/curriculum.js",
-  "./data/a1.js",
-  "./data/a2.js",
-  "./data/b1.js",
-  "./data/b2.js",
+  "./data/a1-part1.js",
+  "./data/a1-part2.js",
+  "./data/a2-part1.js",
+  "./data/a2-part2.js",
+  "./data/b1-part1.js",
+  "./data/b1-part2.js",
+  "./data/b2-part1.js",
+  "./data/b2-part2.js",
   "./data/c1.js",
   "./data/c2.js",
   "./icons/icon-192.png",
@@ -44,7 +49,6 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) {
-        // stale-while-revalidate for JS/CSS/data
         if (/\.(js|css|webmanifest)$/.test(url.pathname)) {
           fetch(req).then((res) => {
             if (res && res.ok) {
@@ -77,9 +81,6 @@ function isCacheable(pathname) {
     p.includes("/icons/") ||
     p.includes("/css/") ||
     p.includes("/js/") ||
-    p.includes("/data/") ||
-    p.endsWith("/russian-learn") ||
-    p === "/" ||
-    p.endsWith("russian-learn")
+    p.includes("/data/")
   );
 }
