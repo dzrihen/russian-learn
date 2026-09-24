@@ -1,1 +1,1 @@
-window.RL_META={"bankSize": 6440, "introducedInContent": 6440, "lessonCounts": {"A1": 325, "A2": 301, "B1": 326, "B2": 326, "C1": 281, "C2": 263}, "totalLessons": 1822};
+window.RL_META={"bankSize": 6440, "introducedInContent": 6440, "lessonCounts": {"A1": 360, "A2": 336, "B1": 361, "B2": 361, "C1": 316, "C2": 298}, "totalLessons": 2032, "conversationThemes": ["food", "travel", "health", "work", "shopping", "social", "housing", "services", "emergency"]};
