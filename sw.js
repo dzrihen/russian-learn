@@ -1,5 +1,5 @@
 /* Russian Learn v16 — network-first shell; progress lives in localStorage + cloud sync (not SW caches) */
-const CACHE_NAME = "russian-learn-v16";
+const CACHE_NAME = "russian-learn-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
