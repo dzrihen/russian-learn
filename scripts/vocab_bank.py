@@ -268,7 +268,7 @@ B1_EXTRA = (
         ("карьера", "קריירה"), ("профессия", "מקצוע"), ("зарплата", "משכורת"),
         ("налог", "מס"), ("бюджет", "תקציב"), ("инвестиция", "השקעה"), ("риск", "סיכון"),
         ("успех", "הצלחה"), ("неудача", "כישלון"), ("ошибка", "טעות"), ("достижение", "הישג"),
-        ("отношения", "יחסים"), ("довірие".replace("і","и"), "אמון"), ("уважение", "כבוד"),
+        ("отношения", "יחסים"), ("доверие", "אמון"), ("уважение", "כבוד"),
         ("конфликт", "קונפליקט"), ("компромисс", "פשרה"), ("дружба", "חברות"),
         ("бюрократия", "בירוקרטיה"), ("очередь", "תור"), ("справка", "אישור/תעודה"),
         ("заявление", "בקשה"), ("чиновник", "פקיד"), ("гражданин", "אזרח"),
@@ -452,166 +452,56 @@ class LemmaTracker:
             "total_uses": sum(self.usage.values()),
         }
 
-# Sentence templates that inject lemmas to force breadth
-# Prefer frames where dictionary form (lemma) sounds natural:
-# nouns as topics/quotes, verbs as infinitives, adjectives before nouns.
+import random
+import template_guard as G
 
-TEMPLATES_A1 = [
-    ("Это {n}.", "זה {n_he}."),
-    ("Где {n}?", "איפה {n_he}?"),
-    ("У меня есть {n}.", "יש לי {n_he}."),
-    ("Мне нужен {n}.", "אני צריך {n_he}."),
-    ("Я хочу {v}.", "אני רוצה {v_he}."),
-    ("Я люблю {n}.", "אני אוהב/ת {n_he}."),
-    ("Это {adj} {n}.", "זה {n_he} {adj_he}."),
-    ("Сегодня я хочу {v}.", "היום אני רוצה {v_he}."),
-    ("Мы ищем {n}.", "אנחנו מחפשים {n_he}."),
-    ("Он покупает {n}.", "הוא קונה {n_he}."),
-    ("Она пьёт чай и берёт {n}.", "היא שותה תה ולוקחת {n_he}."),
-    ("Сколько стоит {n}?", "כמה עולה {n_he}?"),
-    ("Мой {n} дома.", "{n_he} שלי בבית."),
-    ("Ваш {n} здесь?", "{n_he} שלכם כאן?"),
-    ("Я не понимаю слово «{n}».", "אני לא מבין/ה את המילה «{n_he}»."),
-    ("Можно {v}?", "אפשר {v_he}?"),
-    ("Дайте, пожалуйста, {n}.", "תנו בבקשה {n_he}."),
-    ("Я живу рядом — вижу {n}.", "אני גר קרוב — רואה {n_he}."),
-    ("После работы я хочу {v}.", "אחרי העבודה אני רוצה {v_he}."),
-    ("Без {n} трудно.", "בלי {n_he} קשה."),
-    ("Кстати, где {n}?", "אגב, איפה {n_he}?"),
-    ("Сначала нужно {v}.", "קודם צריך {v_he}."),
-    ("Вот мой {n}.", "הנה ה{n_he} שלי."),
-    ("Это не {n}.", "זה לא {n_he}."),
-]
+# NOTE: open slot frames used to be filled with *any* unused bank lemma in its
+# dictionary form (people, places, verbs, abstract nouns, placeholders),
+# producing nonsense such as «Мне нужен страна.», «Без тарелка трудно.»,
+# «Сколько стоит подруга?» and meta filler like «Давайте разберём слово «X».»
+# (Hebrew: «זו שאלה די משפטי»).  Slots are now restricted to
+# template_guard.SAFE_NOUNS (concrete nouns with verified Hebrew gloss and the
+# correct Russian accusative), each template only accepts the categories that
+# make sense in it, and everything else becomes a plain vocab row
+# (word = gloss) or is skipped (placeholder lemmas).  Unit content itself
+# comes from the hand-written scripts/everyday_sentences.json pools.
 
-TEMPLATES_ADV = [
-    # Nouns — topic / quote frames (lemma stays nominative)
-    ("Тема разговора — {n}.", "נושא השיחה — {n_he}."),
-    ("Сегодня речь о теме «{n}».", "היום מדובר בנושא «{n_he}»."),
-    ("Меня интересует тема «{n}».", "מעניין אותי הנושא «{n_he}»."),
-    ("Давайте разберём слово «{n}».", "בואו נפרק את המילה «{n_he}»."),
-    ("В новостях часто встречается слово «{n}».", "בחדשות לעתים קרובות מופיעה המילה «{n_he}»."),
-    ("Для меня «{n}» — важная тема.", "עבורי «{n_he}» הוא נושא חשוב."),
-    ("Без понятия «{n}» трудно понять текст.", "בלי המושג «{n_he}» קשה להבין את הטקסט."),
-    ("Ключевое слово здесь — «{n}».", "המילה המרכזית כאן — «{n_he}»."),
-    ("В отчёте отдельный раздел — {n}.", "בדוח יש פרק נפרד — {n_he}."),
-    ("Кстати, давайте уточним термин «{n}».", "אגב, בואו נדייק את המונח «{n_he}»."),
-    # Verbs — infinitive frames
-    ("Стоит {v} заранее.", "כדאי {v_he} מראש."),
-    ("Я планирую {v}.", "אני מתכנן/ת {v_he}."),
-    ("Сейчас нужно {v}.", "עכשיו צריך {v_he}."),
-    ("Пора {v}.", "הגיע הזמן {v_he}."),
-    ("Лучше не {v} в спешке.", "עדיף לא {v_he} בחיפזון."),
-    ("Придётся {v} ещё раз.", "יהיה צריך {v_he} שוב."),
-    ("Многие предпочитают {v}.", "רבים מעדיפים {v_he}."),
-    ("Эксперты советуют {v} осторожно.", "מומחים ממליצים {v_he} בזהירות."),
-    ("Я стараюсь {v} каждый день.", "אני משתדל/ת {v_he} כל יום."),
-    # Adjectives — prenominal / predicative-friendly
-    ("Это довольно {adj} вопрос.", "זו שאלה די {adj_he}."),
-    ("Нам нужен {adj} ответ.", "אנחנו צריכים תשובה {adj_he}."),
-    ("Это довольно {adj} подход.", "זו גישה די {adj_he}."),
-    
-    ("Это {adj} случай, не исключение.", "זה מקרה {adj_he}, לא חריג."),
-    
-]
 
-def fill_template(tpl_ru, tpl_he, slots):
-    return tpl_ru.format(**slots), tpl_he.format(**slots)
+def _plain_row_ok(u):
+    lem, he = u.get("lemma") or "", u.get("he") or ""
+    return bool(lem) and not G.PLACEHOLDER_RE.search(lem) and not G.HE_PLACEHOLDER_RE.search(he)
+
 
 def natural_rows_for_lemma(u, rng=None):
-    """2–3 natural everyday/formal frames for one lemma by POS."""
-    import random
+    """Safe template rows for whitelisted nouns, otherwise the plain word row."""
     rng = rng or random.Random(hash(u["lemma"]) % 10_000)
-    lem, he, pos = u["lemma"], u["he"], u["pos"]
-    if pos == "v":
-        pool = [
-            (f"Стоит {lem} заранее.", f"כדאי {he} מראש."),
-            (f"Я планирую {lem}.", f"אני מתכנן/ת {he}."),
-            (f"Сейчас нужно {lem}.", f"עכשיו צריך {he}."),
-            (f"Пора {lem}.", f"הגיע הזמן {he}."),
-            (f"Лучше не {lem} в спешке.", f"עדיף לא {he} בחיפזון."),
-            (f"Придётся {lem} ещё раз.", f"יהיה צריך {he} שוב."),
-            (f"Многие предпочитают {lem}.", f"רבים מעדיפים {he}."),
-            (f"Я стараюсь {lem} каждый день.", f"אני משתדל/ת {he} כל יום."),
-        ]
-    elif pos == "adj":
-        pool = [
-            (f"Это довольно {lem} вопрос.", f"זו שאלה די {he}."),
-            (f"Нам нужен {lem} ответ.", f"אנחנו צריכים תשובה {he}."),
-            (f"Это довольно {lem} подход.", f"זו גישה די {he}."),
-            (f"Это {lem} случай, не исключение.", f"זה מקרה {he}, לא חריג."),
-            (f"Перед нами {lem} выбор.", f"לפנינו בחירה {he}."),
-            (f"Перед нами довольно {lem} пример.", f"לפנינו דוגמה די {he}."),
-        ]
-    elif pos == "adv":
-        pool = [
-            (f"Мы действуем {lem}.", f"אנחנו פועלים {he}."),
-            (f"Он ответил {lem}.", f"הוא ענה {he}."),
-            (f"Сделайте это {lem}.", f"עשו את זה {he}."),
-            (f"Всё прошло {lem}.", f"הכול עבר {he}."),
-        ]
-    else:
-        pool = [
-            (f"Тема разговора — {lem}.", f"נושא השיחה — {he}."),
-            (f"Сегодня речь о теме «{lem}».", f"היום מדובר בנושא «{he}»."),
-            (f"Меня интересует тема «{lem}».", f"מעניין אותי הנושא «{he}»."),
-            (f"Давайте разберём слово «{lem}».", f"בואו נפרק את המילה «{he}»."),
-            (f"В новостях часто встречается слово «{lem}».", f"בחדשות לעתים קרובות מופיעה המילה «{he}»."),
-            (f"Для меня «{lem}» — важная тема.", f"עבורי «{he}» הוא נושא חשוב."),
-            (f"Без понятия «{lem}» трудно понять текст.", f"בלי המושג «{he}» קשה להבין את הטקסט."),
-            (f"В отчёте отдельный раздел — «{lem}».", f"בדוח יש פרק נפרד — «{he}»."),
-            (f"Ключевое слово здесь — «{lem}».", f"המילה המרכזית כאן — «{he}»."),
-        ]
-    rng.shuffle(pool)
-    return pool[:2]
+    if G.slot_ok(u):
+        tids = [t[0] for t in G.TEMPLATES if G.slot_ok(u, t[0])]
+        rng.shuffle(tids)
+        rows = [G.render(t, u["lemma"]) for t in tids[:3]]
+        return [r for r in rows if r]
+    return [(u["lemma"], u["he"])] if _plain_row_ok(u) else []
+
 
 def generate_lemma_sentences(tracker, cefr=("a1",), theme=None, count=8):
-    """Create sentence rows introducing underused lemmas."""
-    import random
-    rng = random.Random(hash((theme, count, tracker.stats()["introduced"])) % 10_000)
-    nouns = tracker.pick(40, cefr=cefr, theme=theme, pos="n") or tracker.pick(40, cefr=cefr, pos="n")
-    verbs = tracker.pick(30, cefr=cefr, pos="v")
-    adjs = tracker.pick(30, cefr=cefr, pos="adj")
+    """Template sentences ONLY for whitelisted concrete nouns (see template_guard)."""
+    if isinstance(cefr, str):
+        cefr = (cefr,)
+    unused = tracker.pick(count * 6, cefr=cefr, theme=theme) or tracker.pick(count * 6, cefr=cefr) or tracker.pick(count * 6)
+    nouns = [x for x in unused if G.slot_ok(x)]
+    rng = random.Random(42 + len(tracker.introduced))
     rows = []
-    used_local = set()
-    levels = set(cefr) if isinstance(cefr, (tuple, list, set)) else {cefr}
-    templates = TEMPLATES_ADV if levels & {"b1", "b2", "c1", "c2"} else TEMPLATES_A1
-    # Shuffle template order so openings vary across batches
-    order = list(range(len(templates)))
-    rng.shuffle(order)
-    for i in range(count * 4):
+    for n in nouns:
         if len(rows) >= count:
             break
-        tpl_ru, tpl_he = templates[order[i % len(order)]]
-        slots = {}
-        if "{n}" in tpl_ru:
-            if not nouns:
-                break
-            n = nouns[i % len(nouns)]
-            if n["lemma"].lower() in used_local and len(nouns) > 1:
-                n = nouns[(i + 3) % len(nouns)]
-            slots["n"] = n["lemma"]
-            slots["n_he"] = n["he"]
-            used_local.add(n["lemma"].lower())
-        if "{v}" in tpl_ru:
-            if not verbs:
-                continue
-            v = verbs[i % len(verbs)]
-            slots["v"] = v["lemma"]
-            slots["v_he"] = v["he"]
-            used_local.add(v["lemma"].lower())
-        if "{adj}" in tpl_ru:
-            if not adjs:
-                continue
-            a = adjs[i % len(adjs)]
-            slots["adj"] = a["lemma"]
-            slots["adj_he"] = a["he"]
-            used_local.add(a["lemma"].lower())
-        try:
-            ru, he = fill_template(tpl_ru, tpl_he, slots)
-        except KeyError:
+        tids = [t[0] for t in G.TEMPLATES if G.slot_ok(n, t[0])]
+        if not tids:
             continue
-        rows.append((ru, he))
-        tracker.mark_text(ru)
+        row = G.render(rng.choice(tids), n["lemma"])
+        if not row:
+            continue
+        rows.append(row)
+        tracker.mark_text(row[0])
     return rows
 
 if __name__ == "__main__":
